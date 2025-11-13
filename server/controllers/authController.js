@@ -7,10 +7,10 @@ import { EMAIL_VERIFY_TEMPLATE, PASSWORD_RESET_TEMPLATE } from "../config/emailT
 // ------------------- COOKIE OPTIONS -------------------
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production", // HTTPS in prod
+  secure: process.env.NODE_ENV === "production", // HTTPS in prod (Render)
   sameSite: process.env.NODE_ENV === "production" ? "none" : "strict", // cross-site cookies in prod
   maxAge: 7 * 24 * 60 * 60 * 1000,
-  // domain: process.env.NODE_ENV === "production" ? ".onrender.com" : undefined, // optional if frontend is subdomain
+  // domain: process.env.NODE_ENV === "production" ? ".onrender.com" : undefined, // optional
 };
 
 // ------------------- REGISTER -------------------
@@ -36,13 +36,13 @@ export const register = async (req, res) => {
       subject: "🎉 Welcome to My App!",
       html: `<p>Hi <b>${name}</b> 👋,<br>Your account has been created successfully! ✅</p>`,
     };
-    try { await transporter.sendMail(welcomeMail); } catch (err) { console.error(err); }
+    try { await transporter.sendMail(welcomeMail); } catch (err) { console.error("Welcome mail error:", err); }
 
     await sendOtpAfterRegistration(user);
 
     return res.json({ success: true, message: "User registered successfully. OTP sent to email." });
   } catch (error) {
-    console.error(error);
+    console.error("Registration error:", error);
     return res.json({ success: false, message: error.message });
   }
 };
@@ -50,7 +50,9 @@ export const register = async (req, res) => {
 // ------------------- HELPER: Send OTP -------------------
 const sendOtpAfterRegistration = async (user) => {
   try {
+    // optional verify - good for debug but can be removed in prod
     await transporter.verify();
+
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     user.verifyOtp = otp;
     user.verifyOtpExpireAt = Date.now() + 5 * 60 * 1000;
@@ -63,7 +65,9 @@ const sendOtpAfterRegistration = async (user) => {
       html: EMAIL_VERIFY_TEMPLATE.replace("{{otp}}", otp).replace("{{email}}", user.email),
     };
     await transporter.sendMail(otpMail);
-  } catch (error) { console.error(error); }
+  } catch (error) {
+    console.error("sendOtpAfterRegistration error:", error);
+  }
 };
 
 // ------------------- LOGIN -------------------
@@ -82,21 +86,32 @@ export const login = async (req, res) => {
     res.cookie("token", token, cookieOptions);
 
     return res.json({ success: true, message: "Login successful" });
-  } catch (error) { return res.json({ success: false, message: error.message }); }
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.json({ success: false, message: error.message });
+  }
 };
 
 // ------------------- LOGOUT -------------------
 export const logout = async (req, res) => {
   try {
+    // Clear cookie with same options so browser removes correctly
     res.clearCookie("token", cookieOptions);
     return res.json({ success: true, message: "Logged out" });
-  } catch (error) { return res.json({ success: false, message: error.message }); }
+  } catch (error) {
+    console.error("Logout error:", error);
+    return res.json({ success: false, message: error.message });
+  }
 };
 
 // ------------------- SEND VERIFY OTP -------------------
+// Protected route (userAuth middleware). Use req.user.id (not req.body.userId).
 export const sendVerifyOtp = async (req, res) => {
   try {
-    const user = await userModel.findById(req.body.userId);
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, message: "Not Authorized" });
+
+    const user = await userModel.findById(userId);
     if (!user) return res.json({ success: false, message: "User not found" });
     if (user.isAccountVerified) return res.json({ success: false, message: "Account already verified" });
 
@@ -114,15 +129,22 @@ export const sendVerifyOtp = async (req, res) => {
     await transporter.sendMail(otpMail);
 
     return res.json({ success: true, message: "Verification OTP sent to email" });
-  } catch (error) { return res.json({ success: false, message: error.message }); }
+  } catch (error) {
+    console.error("sendVerifyOtp error:", error);
+    return res.json({ success: false, message: error.message });
+  }
 };
 
 // ------------------- VERIFY EMAIL -------------------
+// Protected route (userAuth). Use req.user.id to identify user.
 export const verifyEmail = async (req, res) => {
-  const { otp, userId } = req.body;
+  const { otp } = req.body;
   if (!otp) return res.json({ success: false, message: "OTP is required" });
 
   try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, message: "Not Authorized" });
+
     const user = await userModel.findById(userId);
     if (!user) return res.json({ success: false, message: "User not found" });
 
@@ -135,13 +157,21 @@ export const verifyEmail = async (req, res) => {
     await user.save();
 
     return res.json({ success: true, message: "Email verified successfully" });
-  } catch (error) { return res.json({ success: false, message: error.message }); }
+  } catch (error) {
+    console.error("verifyEmail error:", error);
+    return res.json({ success: false, message: error.message });
+  }
 };
 
 // ------------------- IS AUTHENTICATED -------------------
+// Protected by userAuth — return a bit more info for frontend convenience
 export const isAuthenticated = async (req, res) => {
-  try { return res.json({ success: true }); }
-  catch (error) { return res.json({ success: false, message: error.message }); }
+  try {
+    return res.json({ success: true, userId: req.user?.id || null });
+  } catch (error) {
+    console.error("isAuthenticated error:", error);
+    return res.json({ success: false, message: error.message });
+  }
 };
 
 // ------------------- PASSWORD RESET -------------------
@@ -167,7 +197,10 @@ export const sendResetOtp = async (req, res) => {
     await transporter.sendMail(resetMail);
 
     return res.json({ success: true, message: "OTP sent to your email" });
-  } catch (error) { return res.json({ success: false, message: error.message }); }
+  } catch (error) {
+    console.error("sendResetOtp error:", error);
+    return res.json({ success: false, message: error.message });
+  }
 };
 
 export const resetPassword = async (req, res) => {
@@ -187,5 +220,8 @@ export const resetPassword = async (req, res) => {
     await user.save();
 
     return res.json({ success: true, message: "Password has been reset successfully" });
-  } catch (error) { return res.json({ success: false, message: error.message }); }
+  } catch (error) {
+    console.error("resetPassword error:", error);
+    return res.json({ success: false, message: error.message });
+  }
 };
