@@ -16,9 +16,9 @@ const EmailVerify = () => {
   useEffect(() => {
     const checkVerified = async () => {
       try {
-        const { data } = await axios.get(backendUrl + "/api/auth/me", {
-          withCredentials: true,
-        });
+        const { data } = await axios.get(backendUrl + "/api/auth/is-auth", {
+  withCredentials: true,});
+
         if (data.success && data.user?.isAccountVerified) {
           navigate("/");
         }
