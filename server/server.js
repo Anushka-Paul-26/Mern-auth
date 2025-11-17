@@ -20,10 +20,16 @@ const FRONTEND_URL =
 
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin: [
+      "https://mern-auth-fr.onrender.com",
+      "http://localhost:5173"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
 
 // Middleware
 app.use(express.json());
