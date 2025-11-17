@@ -9,35 +9,31 @@ import userRouter from "./routes/userRoutes.js";
 const app = express();
 const port = process.env.PORT || 4000;
 
-// DB connect
+// Connect MongoDB
 connectDB();
 
-// ✅ CORS setup
-const FRONTEND_URL =
-  process.env.NODE_ENV === "production"
-    ? "https://mern-auth-fr.onrender.com"
-    : "http://localhost:5173";
-
+// ✅ Correct CORS Setup for Render + Localhost
 app.use(
   cors({
     origin: [
+      "http://localhost:5173",
       "https://mern-auth-fr.onrender.com",
-      "http://localhost:5173"
+      "https://www.mern-auth-fr.onrender.com" // Render sometimes adds 'www'
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
+    credentials: true, // IMPORTANT for cookies
   })
 );
-
 
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
 
-// API routes
+// API Routes
 app.get("/", (req, res) => res.send("API working!!"));
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 
+// Start Server
 app.listen(port, () => console.log(`Server started on PORT: ${port}`));
