@@ -185,7 +185,7 @@ export const isAuthenticated = async (req, res) => {
 
     return res.json({
       success: true,
-      user: {
+      userData: {
         name: user.name,
         email: user.email,
         isAccountVerified: user.isAccountVerified
