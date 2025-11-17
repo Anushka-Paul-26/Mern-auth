@@ -1,8 +1,6 @@
 import React, { createContext, useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-axios.defaults.withCredentials = true;
-
 
 export const AppContent = createContext();
 
@@ -16,7 +14,7 @@ export const AppContextProvider = ({ children }) => {
   const getUserdata = async () => {
     try {
       const { data } = await axios.get(`${backendUrl}/api/user/data`, {
-        withCredentials: true,
+        withCredentials: true, // important to send cookies
       });
 
       if (data.success) {
@@ -26,25 +24,26 @@ export const AppContextProvider = ({ children }) => {
       }
     } catch (error) {
       setUserData({});
-      // Optional: toast.error(error.response?.data?.message || error.message);
+      // optional: toast.error(error.response?.data?.message || error.message);
     }
   };
 
-  // Check authentication
+  // Check if user is authenticated
   const getAuthState = async () => {
     try {
       const { data } = await axios.get(`${backendUrl}/api/auth/is-auth`, {
-        withCredentials: true,
+        withCredentials: true, // critical for cookies
       });
 
       if (data.success) {
         setIsLoggedin(true);
-        getUserdata();
+        getUserdata(); // fetch user info
       } else {
         setIsLoggedin(false);
         setUserData({});
       }
     } catch (error) {
+      // ❌ If 401 or error, reset state
       setIsLoggedin(false);
       setUserData({});
     }
