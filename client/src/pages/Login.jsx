@@ -39,7 +39,7 @@ const Login = () => {
         );
 
         setIsLoggedin(true);
-        setUserData(data.user || {});
+        setUserData(data.userData || {});
 
         if (state === "Login") {
           await getUserdata();
