@@ -93,7 +93,7 @@ export const login = async (req, res) => {
     return res.json({ 
       success: true, 
       message: 'Login successful',
-      user: {
+      userData: {
         name: user.name,
         email: user.email,
         isAccountVerified: user.isAccountVerified
